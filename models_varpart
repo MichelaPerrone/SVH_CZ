@@ -1,0 +1,100 @@
+# load libraries 
+library(mgcv)
+
+# url for data
+data = readRDS('SVHinCZ_data.RDS')
+
+# species richness ~ SpecCom
+sr_speccom_full=gam(SR ~ poly(scale(speccom), 2, raw = F):CLC +
+                     s(longitude, latitude, bs = "sos") +
+                     log(sampeff),
+               family = nb(), link= log, data= data)
+               
+sr_speccom_sampeff
+      
+
+# species richness ~ Rao's Q
+sr_rao_full=gam(SR ~ poly(scale(RaoQ), 2, raw = F):CLC + 
+                 s(longitude, latitude, bs = "sos") +
+                 log(sampeff),
+           family = nb(), link= log, data= data)
+               
+# species richness ~ sdNDVI
+sr_sdNDVI_full=gam(SR ~ poly(scale(sdNDVI), 2, raw = F):CLC + 
+                    s(longitude, latitude, bs = "sos") +
+                    log(sampeff), 
+              family = nb(), link= log, data= data)
+      
+# functional diversity ~ SpecCom
+fd_speccom_full=gam(FD ~ poly(scale(speccom), 2, raw = F):CLC + 
+                         s(longitude, latitude, bs = "sos") + 
+                         log(sampeff), 
+               family = "gaussian", data= data)
+      
+# functional diversity ~ Rao's Q
+fd_Rao_full=gam(FD ~ poly(scale(RaoQ), 2, raw = F):CLC + 
+                 s(longitude, latitude, bs = "sos") +
+               log(sampeff),
+           family = "gaussian", data= data)
+           
+# functional diversity ~ sdNDVI
+fd_sdNDVI_full=gam(FD ~ poly(scale(sdNDVI), 2, raw = F):CLC + 
+                        s(longitude, latitude, bs = "sos") +
+                        log(sampeff),
+              family = "gaussian", data= data)
+
+# variation partitioning
+varpart <- function(biodiv, sd_metric, family)
+{ 
+  bdiv= as.character(biodiv)
+  metric = as.character(sd_metric)
+  fam = as.character(family)
+  models_table = expand.grid(paste("gam(", bdiv,"~"),
+                             c(paste("poly(scale(", metric, "), 2, raw = F):CLC"), 
+                              paste("poly(scale(", metric ,"), 2, raw = F):CLC + s(longitude, latitude, bs = 'sos')"),
+                              paste("poly(scale(", metric, "), 2, raw = F):CLC + log(sampeff)"),
+                              paste("poly(scale(", metric,"), 2, raw = F):CLC + s(longitude, latitude, bs = 'sos') + log(sampeff)"),
+                              "s(longitude, latitude, bs = 'sos')",
+                              "log(sampeff)",
+                              "s(longitude, latitude, bs = 'sos') + log(sampeff)"),
+                              paste(", family = ", fam,"(), link= log, data= data)"))
+  
+  for(i in 1:ncol(models_table))models_table[,i]<-as.character(models_table[,i])
+  models<-apply(models_table, 1, paste, collapse="")
+  
+  devSD= round((summary(eval(parse(text= models[1])))$dev.expl)*100, digits = 1)
+  devSD_sp= round((summary(eval(parse(text= models[2])))$dev.expl)*100, digits = 1)
+  devSD_se= round((summary(eval(parse(text= models[3])))$dev.expl)*100, digits = 1)
+  dev_full=round((summary(eval(parse(text= models[4])))$dev.expl)*100, digits = 1)
+  devsp= round((summary(eval(parse(text= models[5])))$dev.expl)*100, digits = 1)
+  devse= round((summary(eval(parse(text= models[6])))$dev.expl)*100, digits = 1)
+  devse_sp= round((summary(eval(parse(text= models[7])))$dev.expl)*100, digits= 1)
+  
+  SDonly = dev_full-devse_sp # unique to SD
+  sponly = dev_full-devSD_se # unique to splines
+  seonly = dev_full-devSD_sp # unique to sampling effort
+  all3 = devSD + devse + devsp -2*dev_full + 
+    (SDonly) + (seonly) + (sponly)  # shared by all three
+  sharedSDse = devSD + devse - devSD_se - all3 # shared SD & sampling effort
+  sharedSDsp = devSD + devsp - devSD_sp - all3 # shared SD & splines
+  sharedsesp = devse + devsp - devse_sp - all3 # shared sampling effort & splines
+  
+  
+  dev_list <- list(`SD only` = SDonly,  
+    `splines only` = sponly,
+    `sampling effort only` = seonly,
+    `shared by all three` = all3,
+    `shared SD & sampling effort` = sharedSDse, 
+    `shared SD & splines` =  sharedSDsp, 
+    `shared sampling effort & splines` =  sharedsesp,
+    `residual percentage` = 100 - (dev_full)
+  )
+  
+  return(dev_list)
+}
+
+# variation patitioning
+varpart("SR", "speccom", "nb") # species richness ~ SpecCom
+varpart("SR", "RaoQ", "nb") # species richness ~ Rao's Q
+varpart("SR", "sdNDVI", "nb") # species richness ~ sd NDVI
+varpart("FD", "speccom", "gaussian") # functional diversity ~ SpecCom
