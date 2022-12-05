@@ -98,3 +98,5 @@ varpart("SR", "speccom", "nb") # species richness ~ SpecCom
 varpart("SR", "RaoQ", "nb") # species richness ~ Rao's Q
 varpart("SR", "sdNDVI", "nb") # species richness ~ sd NDVI
 varpart("FD", "speccom", "gaussian") # functional diversity ~ SpecCom
+varpart("FD", "RaoQ", "gaussian") # functional diversity ~ Rao's Q
+varpart("FD", "sdNDVI", "gaussian") # functional diversity ~ sd NDVI
