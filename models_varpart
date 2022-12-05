@@ -93,7 +93,7 @@ varpart <- function(biodiv, sd_metric, family)
   return(dev_list)
 }
 
-# variation patitioning
+# variation partitioning
 varpart("SR", "speccom", "nb") # species richness ~ SpecCom
 varpart("SR", "RaoQ", "nb") # species richness ~ Rao's Q
 varpart("SR", "sdNDVI", "nb") # species richness ~ sd NDVI
